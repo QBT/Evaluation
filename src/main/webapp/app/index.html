@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Evaluation</title>
+
+	<link rel="stylesheet/less" type="text/css" href="app.less" />
+    <!-- Less preprocessor-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/less.js/2.4.0/less.js"></script>
+
+    <!-- The core React library -->
+	<script src="http://fb.me/react-0.12.2.js"></script>
+	<!-- In-browser JSX transformer, remove when pre-compiling JSX. -->
+	<script src="http://fb.me/JSXTransformer-0.12.2.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.3.0/lodash.js"></script>
+</head>
+<body>
+    <div id="container"></div>
+
+    <script type="text/jsx">
+
+        var Author = React.createClass({
+
+            getInitialState: function() {
+                return {showBooks: false};
+            },
+
+            getDefaultProps: function() {
+                return {
+                        loadBooks: function(authorID) {
+                            console.log('authorID', authorID);
+                        },
+
+                        author: {
+                                birthYear: 1999, 
+                                name: 'test name', 
+                                id: 0,
+                                books: []
+                        }
+                    };
+            },
+
+            onClick: function(event) {
+                if (!this.props.author.books) {
+                    this.props.loadBooks(this.props.author.id);
+                }
+                this.setState({showBooks: !this.state.showBooks});
+            },  
+
+            render: function() {
+                return (
+                    <div>
+                        <div className='author-card' onClick={this.onClick}>
+                            <span className='name'>{this.props.author.name}, {this.props.author.birthYear}</span>
+                            <span className='id'>ID: {this.props.author.id}</span>
+                        </div>
+                        {this.state.showBooks ? <BookList books={this.props.author.books} /> : ''}
+                    </div>
+                );   
+            }
+        });
+
+        var Book = React.createClass({
+
+            getDefaultProps: function() {
+                return {
+                        book: {
+                            publicationYear: 1999, 
+                            title: 'test title', 
+                            id: 0, 
+                            author: {
+                                birthYear: 1999, 
+                                name: 'test', 
+                                id: 0
+                            }
+                        }
+                    };
+            },
+
+            render: function() {
+                return (
+                    <div className='book-card'>
+                        {this.props.book.thumbnailURL ? <img className='thumbnail' src={this.props.book.thumbnailURL} /> : ''}
+                        <span className='title'>{this.props.book.title}, {this.props.book.publicationYear}</span>
+                        <span className='id'>ID: {this.props.book.id}</span>
+                    </div>
+                );   
+            }
+        });
+        
+        var NewAuthorForm = React.createClass({
+
+            onClick: function() {
+                alert('TODO');
+            },
+
+            render: function() {
+                return (
+                    <form className='new-card' onClick={this.onClick}>
+                        <span className='big-plus'>+</span>
+                        <span>Add Author</span>
+                    </form>
+                );
+            }
+        });
+
+        var AuthorList = React.createClass({
+
+            getDefaultProps: function() {
+                return { 
+                        authors: [], 
+                        loadBooks: function() {}
+                    };
+            },
+
+            render: function() {
+                return (
+                    <div className='author-list'>
+                        {this.props.authors.length === 0 ? <h4>No authors... Try creating one</h4> : ''}
+                        <ul>
+                            <NewAuthorForm />
+                            {this.props.authors.map(function(author){
+                                return <Author 
+                                            author={author} 
+                                            loadBooks={this.props.loadBooks} 
+                                            key={author.id}/>;
+                            }.bind(this))}
+                        </ul>
+                    </div>
+                );
+            }
+        });
+
+        var NewBookForm = React.createClass({
+
+            onClick: function() {
+                alert('TODO');
+            },
+
+            render: function() {
+                return (
+                    <form className='new-card' onClick={this.onClick}>
+                        <span className='big-plus'>+</span>
+                        <span>Add Book</span>
+                    </form>
+                );
+            }
+        });
+
+        var BookList = React.createClass({
+
+            getDefaultProps: function() {
+                return { 
+                        books: []
+                    };
+            },
+
+            render: function() {
+                return (
+                    <div className='book-list' >
+                        <ul>
+                            <NewBookForm />
+                            {this.props.books.map(function(book){
+                                return <Book book={book} key={book.id} />;
+                            })}
+                        </ul>
+                    </div>
+                );
+            }
+        });
+
+        var App = React.createClass({
+
+            getInitialState: function() {
+                return {authors:[], books: []};
+            },
+
+            loadAuthors: function() {
+
+                var req = new XMLHttpRequest();
+                req.open('GET', '/author', true);
+
+                req.onreadystatechange = function (aEvt) {
+                    if (req.readyState == 4) {
+                        if(req.status == 200) {
+                            console.log('authors list: ', req.responseText);
+                            this.setState({authors: JSON.parse(req.responseText)});
+                        } else {
+                            console.log('Erreur pendant le chargement des auteurs.\n');
+                        }
+                    }
+                }.bind(this);
+
+                req.send(null);
+            },
+
+            loadBooks: function(authorID) {
+
+                var req = new XMLHttpRequest();
+                req.open('GET', '/author/' + authorID + '/book', true);
+
+                req.onreadystatechange = function (aEvt) {
+                    if (req.readyState == 4) {
+                        if(req.status == 200) {
+                            console.log('author ID', authorID, ' books list: ', req.responseText);
+                            this.setState({authors: this.state.authors.map(function(author){
+                                if (author.id === authorID) {
+                                    author.books = JSON.parse(req.responseText);
+                                }
+                                return author;
+                            })});
+                        } else {
+                            console.log('Erreur pendant le chargement des livres. \n');
+                        }
+                    }
+                }.bind(this);
+
+                req.send(null);
+            },
+
+            componentDidMount: function() {
+                this.loadAuthors();
+            },
+
+            render: function() {
+                return (
+                    <div>
+                        <h1>Kubity Library</h1>
+                        <AuthorList authors={this.state.authors} loadBooks={this.loadBooks} />
+                    </div>
+                );
+            }
+        });
+
+        React.render(<App />, document.getElementById('container'));
+
+    </script>
+</body>
+</html>
